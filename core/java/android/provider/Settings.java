@@ -6922,6 +6922,12 @@ public final class Settings {
         public static final String LS_MEDIA_ART_BLUR_LEVEL = "ls_media_art_blur_level";
 
         /**
+         * Whether to show power menu on LockScreen
+         * @hide
+         */
+        public static final String LOCKSCREEN_ENABLE_POWER_MENU = "lockscreen_enable_power_menu";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
@@ -7067,6 +7073,7 @@ public final class Settings {
             PRIVATE_SETTINGS.add(PREFERRED_REGION);
             PRIVATE_SETTINGS.add(MOUSE_SCROLLING_ACCELERATION);
             PRIVATE_SETTINGS.add(MOUSE_SCROLLING_SPEED);
+            PRIVATE_SETTINGS.add(LOCKSCREEN_ENABLE_POWER_MENU);
         }
 
         /**
