@@ -23,4 +23,8 @@
 
    <!-- API URL to fetch PIF from -->
    <java-symbol type="string" name="config_pifUpdateUrl" />
+
+   <!-- Light / Regular style fonts -->
+   <java-symbol type="string" name="config_lightFontFamily" />
+   <java-symbol type="string" name="config_regularFontFamily" />
 </resources>
