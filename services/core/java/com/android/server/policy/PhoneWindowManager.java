@@ -2256,6 +2256,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case KILL_APP:
                 ActionUtils.killForegroundApp(mContext, mCurrentUserId);
                 break;
+            case VOLUME_PANEL:
+                ActionUtils.toggleVolumePanel(mContext);
             default:
                 break;
         }
