@@ -85,6 +85,8 @@ public class KeyguardSliceProvider extends SliceProvider implements
 
     private static final String TAG = "KgdSliceProvider";
 
+    private static final String NOW_PLAYING = "Now Playing";
+
     private static final StyleSpan BOLD_STYLE = new StyleSpan(Typeface.BOLD);
     public static final String KEYGUARD_SLICE_URI = "content://com.android.systemui.keyguard/main";
     private static final String KEYGUARD_HEADER_URI =
@@ -255,6 +257,20 @@ public class KeyguardSliceProvider extends SliceProvider implements
             return;
         }
         listBuilder.setHeader(new ListBuilder.HeaderBuilder(mHeaderUri).setTitle(mMediaTitle));
+
+        if (NOW_PLAYING.contentEquals(mMediaArtist)) {
+            RowBuilder albumBuilder = new RowBuilder(mMediaUri);
+            albumBuilder.setTitle(mMediaArtist);
+
+            // Use an icon from resources
+            IconCompat mediaIconCompat = IconCompat.createWithResource(getContext(), R.drawable.ic_music_note);
+            if (mediaIconCompat != null) {
+                albumBuilder.addEndItem(mediaIconCompat, ListBuilder.ICON_IMAGE);
+            }
+
+            listBuilder.addRow(albumBuilder);
+            return;
+        }
 
         if (!TextUtils.isEmpty(mMediaArtist)) {
             RowBuilder albumBuilder = new RowBuilder(mMediaUri);
@@ -525,7 +541,7 @@ public class KeyguardSliceProvider extends SliceProvider implements
 
         // Set new track info from playing media notification
         mMediaTitle = title;
-        mMediaArtist = nowPlayingAvailable ? null : artist;
+        mMediaArtist = nowPlayingAvailable ? NOW_PLAYING : artist;
         mMediaIsVisible = nextVisible || nowPlayingAvailable;
 
         notifyChange();
