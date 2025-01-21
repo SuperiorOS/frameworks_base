@@ -26,6 +26,9 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.util.Log;
+
+import java.util.Calendar;
 
 import com.android.internal.util.superior.OmniJawsClient;
 import com.android.systemui.res.R;
@@ -40,12 +43,15 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
     private ImageView mHumidityInfoImage;
     private OmniJawsClient mWeatherClient;
     private OmniJawsClient.WeatherInfo mWeatherInfo;
+    private OmniJawsClient.DayForecast mDayForecast;
     private TextView mLeftText;
     private TextView mRightText;
     private TextView mWeatherText;
     private TextView mWeatherWindSpeedInfo;
     private TextView mWeatherWindDirectionInfo;
     private TextView mWeatherHumidityInfo;
+    private TextView mWeatherDaily;
+    private TextView mWeatherDailySummary;
 
     private SettingsObserver mSettingsObserver;
 
@@ -98,6 +104,8 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
         mWeatherWindDirectionInfo = (TextView) findViewById(R.id.weather_wind_direction_info);
         mHumidityInfoImage = (ImageView) findViewById(R.id.humidity_info_image);
         mWeatherHumidityInfo = (TextView) findViewById(R.id.weather_humidity_info);
+        mWeatherDaily = (TextView) findViewById(R.id.weather_daily);
+        mWeatherDailySummary = (TextView) findViewById(R.id.weather_daily_summary);
         if (mSettingsObserver == null) {
             mSettingsObserver = new SettingsObserver(new Handler());
             mSettingsObserver.observe();
@@ -115,6 +123,8 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
         mWeatherWindDirectionInfo.setText("");
         mHumidityInfoImage.setImageDrawable(null);
         mWeatherHumidityInfo.setText("");
+        mWeatherDaily.setText("");
+        mWeatherDailySummary.setText("");
     }
 
     @Override
@@ -126,6 +136,7 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
         // so only show the disabled state
         if (errorReason == OmniJawsClient.EXTRA_ERROR_DISABLED) {
             mWeatherInfo = null;
+            mDayForecast = null;
             setErrorView();
         }
     }
@@ -149,20 +160,17 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
             mWeatherInfo = mWeatherClient.getWeatherInfo();
             if (mWeatherInfo != null) {
                 String formattedCondition = mWeatherInfo.condition;
-                if (formattedCondition.toLowerCase().contains("clouds")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_clouds);
-                } else if (formattedCondition.toLowerCase().contains("rain")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_rain);
-                } else if (formattedCondition.toLowerCase().contains("clear")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_clear);
-                } else if (formattedCondition.toLowerCase().contains("storm")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_storm);
-                } else if (formattedCondition.toLowerCase().contains("snow")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_snow);
-                } else if (formattedCondition.toLowerCase().contains("wind")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_wind);
-                } else if (formattedCondition.toLowerCase().contains("mist")) {
-                    formattedCondition = mContext.getResources().getString(R.string.weather_condition_mist);
+                if (formattedCondition != null && !formattedCondition.isEmpty()) {
+                    String[] words = formattedCondition.split(" ");
+                    StringBuilder formattedBuilder = new StringBuilder();
+                    for (String word : words) {
+                        // Capitalize the first letter and append the rest of the word
+                        formattedBuilder.append(Character.toUpperCase(word.charAt(0)))
+                                        .append(word.substring(1))
+                                        .append(" ");
+                    }
+                    // Remove the trailing space
+                    formattedCondition = formattedBuilder.toString().trim();
                 }
                 Drawable d = mWeatherClient.getWeatherConditionImage(mWeatherInfo.conditionCode);
                 mCurrentImage.setImageDrawable(d);
@@ -186,6 +194,27 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
                 mWeatherWindDirectionInfo.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
                 mWeatherHumidityInfo.setText(mWeatherInfo.humidity);
                 mWeatherHumidityInfo.setVisibility(mShowHumidityInfo ? View.VISIBLE : View.GONE);
+                Calendar calendar = Calendar.getInstance();
+                int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
+                if (currentHour > 5 && currentHour < 10) {
+                    mDayForecast = mWeatherInfo.forecasts.get(0);
+                    if (mDayForecast != null) {
+                        if (mDayForecast.low != null && !mDayForecast.low.isEmpty()) {
+                            mWeatherDaily.setText(" · Today · " + mDayForecast.high + "\u00B0" + "/" + mDayForecast.low + "\u00B0");
+                            mWeatherDaily.setVisibility(View.VISIBLE);
+                            String dailySummary = mDayForecast.conditionSummary;
+                            if (dailySummary != null && !dailySummary.isEmpty()){
+                                mWeatherDailySummary.setText(dailySummary);
+                                mWeatherDailySummary.setVisibility(View.VISIBLE);
+                            } else {
+                                mWeatherDailySummary.setVisibility(View.GONE);
+                            }
+                        }
+                    }
+                } else {
+                    mWeatherDaily.setVisibility(View.GONE);
+                    mWeatherDailySummary.setVisibility(View.GONE);
+                }
             }
         } catch(Exception e) {
             // Do nothing
