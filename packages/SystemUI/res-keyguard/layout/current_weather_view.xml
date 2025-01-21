@@ -72,7 +72,7 @@
 
         <!-- Second line -->
         <LinearLayout
-            android:id="@+id/new_line"
+            android:id="@+id/second_line"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -119,6 +119,32 @@
                 android:textColor="?attr/wallpaperTextColor"
                 android:singleLine="true"
                 style="@style/TextAppearance.Keyguard.Secondary" />
+
+            <TextView
+                android:id="@+id/weather_daily"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/wallpaperTextColor"
+                android:singleLine="true"
+                style="@style/TextAppearance.Keyguard.Secondary" />
+        </LinearLayout>
+
+        <!-- Third line -->
+        <LinearLayout
+            android:id="@+id/third_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/weather_daily_summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/wallpaperTextColor"
+                android:textSize="14dp"
+                android:lineHeight="18dp"
+                android:maxLines="2" />
         </LinearLayout>
 
     </LinearLayout>

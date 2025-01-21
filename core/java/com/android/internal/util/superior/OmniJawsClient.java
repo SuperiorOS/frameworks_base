@@ -76,7 +76,8 @@ public class OmniJawsClient {
             "forecast_condition_code",
             "time_stamp",
             "forecast_date",
-            "pin_wheel"
+            "pin_wheel",
+            "forecast_summary"
     };
 
     public static final String[] SETTINGS_PROJECTION = new String[] {
@@ -124,9 +125,10 @@ public class OmniJawsClient {
         public int conditionCode;
         public String condition;
         public String date;
+        public String conditionSummary;
 
         public String toString() {
-            return "[" + low + ":" + high + ":" +conditionCode + ":" + condition + ":" + date + "]";
+            return "[" + low + ":" + high + ":" +conditionCode + ":" + condition + ":" + date + ":" + conditionSummary + "]";
         }
     }
 
@@ -235,6 +237,7 @@ public class OmniJawsClient {
                                 day.condition = c.getString(9);
                                 day.conditionCode = c.getInt(10);
                                 day.date = c.getString(12);
+                                day.conditionSummary = c.getString(14);
                                 forecastList.add(day);
                             }
                         }
