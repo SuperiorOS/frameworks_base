@@ -30,49 +30,7 @@
 
         <!-- First line -->
         <LinearLayout
-            android:id="@+id/current"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/left_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="?attr/wallpaperTextColor"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:paddingEnd="8dp"
-                style="@style/TextAppearance.Keyguard.Secondary" />
-
-            <ImageView
-                android:id="@+id/current_image"
-                android:layout_width="@dimen/widget_icon_size"
-                android:layout_height="@dimen/widget_icon_size"
-                android:scaleType="centerInside" />
-
-            <TextView
-                android:id="@+id/right_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="?attr/wallpaperTextColor"
-                android:singleLine="true"
-                android:paddingStart="8dp"
-                style="@style/TextAppearance.Keyguard.Secondary" />
-
-            <TextView
-                android:id="@+id/weather_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="?attr/wallpaperTextColor"
-                android:singleLine="true"
-                style="@style/TextAppearance.Keyguard.Secondary" />
-        </LinearLayout>
-
-        <!-- Second line -->
-        <LinearLayout
-            android:id="@+id/second_line"
+            android:id="@+id/first_line"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -90,6 +48,8 @@
                 android:layout_height="wrap_content"
                 android:textColor="?attr/wallpaperTextColor"
                 android:singleLine="true"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
                 style="@style/TextAppearance.Keyguard.Secondary" />
 
             <ImageView
@@ -104,6 +64,8 @@
                 android:layout_height="wrap_content"
                 android:textColor="?attr/wallpaperTextColor"
                 android:singleLine="true"
+                android:paddingStart="8dp"
+                android:paddingEnd="4dp"
                 style="@style/TextAppearance.Keyguard.Secondary" />
 
             <ImageView
@@ -118,15 +80,45 @@
                 android:layout_height="wrap_content"
                 android:textColor="?attr/wallpaperTextColor"
                 android:singleLine="true"
+                android:paddingStart="2dp"
                 style="@style/TextAppearance.Keyguard.Secondary" />
+
+        </LinearLayout>
+
+        <!-- Second line -->
+        <LinearLayout
+            android:id="@+id/second_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/weather_daily"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?attr/wallpaperTextColor"
-                android:singleLine="true"
-                style="@style/TextAppearance.Keyguard.Secondary" />
+                android:textSize="16dp"
+                android:lineHeight="24dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true" />
+
+            <ImageView
+                android:id="@+id/forecast_info_image"
+                android:layout_width="@dimen/widget_icon_size"
+                android:layout_height="@dimen/widget_icon_size"
+                android:scaleType="centerInside" />
+
+            <TextView
+                android:id="@+id/weather_daily_condition"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/wallpaperTextColor"
+                android:textSize="16dp"
+                android:lineHeight="24dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true" />
+
         </LinearLayout>
 
         <!-- Third line -->
