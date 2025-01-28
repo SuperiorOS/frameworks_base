@@ -6346,16 +6346,6 @@ public final class Settings {
         /**
          * @hide
          */
-        public static final String LOCKSCREEN_WEATHER_LOCATION = "lockscreen_weather_location";
-
-        /**
-         * @hide
-         */
-        public static final String LOCKSCREEN_WEATHER_TEXT = "lockscreen_weather_text";
-
-        /**
-         * @hide
-         */
         public static final String LOCKSCREEN_WEATHER_WIND_INFO = "lockscreen_weather_wind_info";
 
         /**
