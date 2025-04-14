@@ -4,6 +4,10 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.RemoteException;
+import android.os.ServiceManager;
+
+import com.android.internal.statusbar.IStatusBarService;
 
 public class SuperiorUtils {
 
@@ -19,6 +23,15 @@ public class SuperiorUtils {
             }
         }
         return true;
+    }
+
+    public static void restartSystemUI() {
+        final IStatusBarService mBarService = IStatusBarService.Stub.asInterface(
+                ServiceManager.getService(Context.STATUS_BAR_SERVICE));
+        try {
+            mBarService.restartSystemUI();
+        } catch (RemoteException e) {
+        }
     }
 
     public static boolean isPackageInstalled(Context context, String packageName) {
