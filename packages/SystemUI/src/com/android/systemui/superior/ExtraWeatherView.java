@@ -33,9 +33,9 @@ import java.util.Calendar;
 import com.android.internal.util.superior.OmniJawsClient;
 import com.android.systemui.res.R;
 
-public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.OmniJawsObserver {
+public class ExtraWeatherView extends FrameLayout implements OmniJawsClient.OmniJawsObserver {
 
-    static final String TAG = "SystemUI:CurrentWeatherView";
+    static final String TAG = "SystemUI:ExtraWeatherView";
 
     private ImageView mWindInfoImage;
     private ImageView mPinwheelImage;
@@ -53,20 +53,20 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
 
     private SettingsObserver mSettingsObserver;
 
-    private boolean mShowWindInfo;
-    private boolean mShowHumidityInfo;
+    private boolean mShowExtraInfo;
+    private boolean mShowWeatherMaster;
 
     private Context mContext;
 
-    public CurrentWeatherView(Context context) {
+    public ExtraWeatherView(Context context) {
         this(context, null);
     }
 
-    public CurrentWeatherView(Context context, AttributeSet attrs) {
+    public ExtraWeatherView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public CurrentWeatherView(Context context, AttributeSet attrs, int defStyle) {
+    public ExtraWeatherView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mContext = context;
         if (mWeatherClient == null) {
@@ -107,16 +107,18 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
     }
 
     private void setVisibilityGone() {
-        mWeatherDaily.setVisibility(View.GONE);
-        mForecastInfoImage.setVisibility(View.GONE);
-        mWeatherDailySummary.setVisibility(View.GONE);
-        mWeatherDailyCondition.setVisibility(View.GONE);
-        mWindInfoImage.setVisibility(View.GONE);
-        mPinwheelImage.setVisibility(View.GONE);
-        mHumidityInfoImage.setVisibility(View.GONE);
-        mWeatherWindSpeedInfo.setVisibility(View.GONE);
-        mWeatherWindDirectionInfo.setVisibility(View.GONE);
-        mWeatherHumidityInfo.setVisibility(View.GONE);
+        setViewsVisibility(View.GONE,
+            mWeatherDaily,
+            mForecastInfoImage,
+            mWeatherDailySummary,
+            mWeatherDailyCondition,
+            mWindInfoImage,
+            mPinwheelImage,
+            mHumidityInfoImage,
+            mWeatherWindSpeedInfo,
+            mWeatherWindDirectionInfo,
+            mWeatherHumidityInfo
+        );
     }
 
     @Override
@@ -155,58 +157,75 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
                 setVisibilityGone();
                 return;
             }
+            int extraInfoVisibility = mShowExtraInfo ? View.VISIBLE : View.GONE;
+
+            // Load drawables once
             Drawable windImage = mWeatherClient.getResOmni("ic_wind_symbol");
-            mWindInfoImage.setImageDrawable(windImage);
-            mWindInfoImage.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
-            Drawable pinWheel = mWeatherClient.getResOmni("ic_wind_direction_symbol");
-            mPinwheelImage.setImageDrawable(pinWheel);
-            mPinwheelImage.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
+            Drawable pinWheelImage = mWeatherClient.getResOmni("ic_wind_direction_symbol");
             Drawable humidityImage = mWeatherClient.getResOmni("ic_humidity_symbol");
+
+            // Set images and visibility
+            mWindInfoImage.setImageDrawable(windImage);
+            mPinwheelImage.setImageDrawable(pinWheelImage);
             mHumidityInfoImage.setImageDrawable(humidityImage);
-            mHumidityInfoImage.setVisibility(mShowHumidityInfo ? View.VISIBLE : View.GONE);
+            setViewsVisibility(extraInfoVisibility, mWindInfoImage, mPinwheelImage, mHumidityInfoImage);
+
+            // Set text and visibility
             mWeatherWindSpeedInfo.setText(mWeatherInfo.windSpeed + " " + mWeatherInfo.windUnits);
-            mWeatherWindSpeedInfo.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
             mWeatherWindDirectionInfo.setText(mWeatherInfo.pinWheel);
-            mWeatherWindDirectionInfo.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
             mWeatherHumidityInfo.setText(mWeatherInfo.humidity);
-            mWeatherHumidityInfo.setVisibility(mShowHumidityInfo ? View.VISIBLE : View.GONE);
-            Calendar calendar = Calendar.getInstance();
-            int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-            if (currentHour > 5 && currentHour < 10) {
+            setViewsVisibility(extraInfoVisibility, mWeatherWindSpeedInfo, mWeatherWindDirectionInfo, mWeatherHumidityInfo);
+
+            // Daily forecast (force show if master toggle is on)
+            if (isCurrentHourInRange(6,10)) {
                 mDayForecast = mWeatherInfo.forecasts.get(0);
                 if (mDayForecast != null) {
                     mWeatherDaily.setText("Today · " + mDayForecast.high + "\u00B0" + "/" + mDayForecast.low + "\u00B0");
-                    mWeatherDaily.setVisibility(View.VISIBLE);
                     Drawable forecastImage = mWeatherClient.getWeatherConditionImage(mDayForecast.conditionCode);
                     mForecastInfoImage.setImageDrawable(forecastImage);
-                    mForecastInfoImage.setVisibility(View.VISIBLE);
                     String dailyCondition = mDayForecast.condition;
                     if (dailyCondition != null && !dailyCondition.isEmpty()) {
-                        String[] words = dailyCondition.split(" ");
-                        StringBuilder formattedBuilder = new StringBuilder();
-                        for (String word : words) {
-                            // Capitalize the first letter and append the rest of the word
-                            formattedBuilder.append(Character.toUpperCase(word.charAt(0)))
-                            .append(word.substring(1))
-                            .append(" ");
-                        }
-                        // Remove the trailing space
-                        dailyCondition = formattedBuilder.toString().trim();
+                        dailyCondition = capitalizeWords(dailyCondition);
                     }
                     mWeatherDailyCondition.setText(" · " + dailyCondition);
-                    mWeatherDailyCondition.setVisibility(View.VISIBLE);
                     String dailySummary = mDayForecast.conditionSummary;
                     mWeatherDailySummary.setText(dailySummary);
-                    mWeatherDailySummary.setVisibility(View.VISIBLE);
+                    setViewsVisibility(View.VISIBLE, mWeatherDaily, mForecastInfoImage, mWeatherDailyCondition, mWeatherDailySummary);
                 }
             } else {
-                mWeatherDaily.setVisibility(View.GONE);
-                mForecastInfoImage.setVisibility(View.GONE);
-                mWeatherDailySummary.setVisibility(View.GONE);
-                mWeatherDailyCondition.setVisibility(View.GONE);
+                setViewsVisibility(View.GONE, mWeatherDaily, mForecastInfoImage, mWeatherDailySummary, mWeatherDailyCondition);
             }
         } catch(Exception e) {
             // Do nothing
+        }
+    }
+
+    private String capitalizeWords(String input) {
+        if (input == null || input.isEmpty()) return input;
+        String[] words = input.split("\\s+");
+        StringBuilder capitalized = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                capitalized.append(Character.toUpperCase(word.charAt(0)))
+                           .append(word.substring(1).toLowerCase())
+                           .append(" ");
+            }
+        }
+        return capitalized.toString().trim();
+    }
+
+    private boolean isCurrentHourInRange(int startHour, int endHour) {
+        Calendar calendar = Calendar.getInstance();
+        int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
+        return currentHour >= startHour && currentHour < endHour;
+    }
+
+    private void setViewsVisibility(int visibility, View... views) {
+        if (views == null) return;
+        for (View view : views) {
+            if (view != null) {
+                view.setVisibility(visibility);
+            }
         }
     }
 
@@ -217,10 +236,10 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
 
         void observe() {
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.LOCKSCREEN_WEATHER_WIND_INFO), false, this,
-                    UserHandle.USER_ALL);
+                Settings.System.LOCKSCREEN_WEATHER_ENABLED), false, this,
+                UserHandle.USER_ALL);
             mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.LOCKSCREEN_WEATHER_HUMIDITY_INFO), false, this,
+                    Settings.System.LOCKSCREEN_WEATHER_EXTRA_INFO), false, this,
                     UserHandle.USER_ALL);
             updateWeatherSettings();
         }
@@ -229,23 +248,34 @@ public class CurrentWeatherView extends FrameLayout implements OmniJawsClient.Om
             mContext.getContentResolver().unregisterContentObserver(this);
         }
 
-        void updateWeatherSettings() {
-            mShowWindInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
-                    Settings.System.LOCKSCREEN_WEATHER_WIND_INFO,
-                    1, UserHandle.USER_CURRENT) != 0;
-            mShowHumidityInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
-                    Settings.System.LOCKSCREEN_WEATHER_HUMIDITY_INFO,
-                    1, UserHandle.USER_CURRENT) != 0;
-            mWeatherInfo = mWeatherClient.getWeatherInfo();
-            if (mWeatherInfo != null) {
-                mWindInfoImage.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
-                mWeatherWindSpeedInfo.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
-                mPinwheelImage.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
-                mWeatherWindDirectionInfo.setVisibility(mShowWindInfo ? View.VISIBLE : View.GONE);
-                mHumidityInfoImage.setVisibility(mShowHumidityInfo ? View.VISIBLE : View.GONE);
-                mWeatherHumidityInfo.setVisibility(mShowHumidityInfo ? View.VISIBLE : View.GONE);
-            }
+    void updateWeatherSettings() {
+        mShowWeatherMaster = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.LOCKSCREEN_WEATHER_ENABLED,
+                0, UserHandle.USER_CURRENT) != 0;
+        mShowExtraInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.LOCKSCREEN_WEATHER_EXTRA_INFO,
+                1, UserHandle.USER_CURRENT) != 0;
+        mWeatherInfo = mWeatherClient.getWeatherInfo();
+        if (mWeatherInfo != null) {
+            int extraInfoVisibility = mShowExtraInfo && mShowWeatherMaster ? View.VISIBLE : View.GONE;
+            int forecastInfoVisibility = mShowWeatherMaster && isCurrentHourInRange(6,10) ? View.VISIBLE : View.GONE;
+
+            setViewsVisibility(extraInfoVisibility,
+                mWindInfoImage,
+                mWeatherWindSpeedInfo,
+                mPinwheelImage,
+                mWeatherWindDirectionInfo,
+                mHumidityInfoImage,
+                mWeatherHumidityInfo
+            );
+            setViewsVisibility(forecastInfoVisibility,
+                mWeatherDaily,
+                mForecastInfoImage,
+                mWeatherDailySummary,
+                mWeatherDailyCondition
+            );
         }
+    }
 
         @Override
         public void onChange(boolean selfChange) {

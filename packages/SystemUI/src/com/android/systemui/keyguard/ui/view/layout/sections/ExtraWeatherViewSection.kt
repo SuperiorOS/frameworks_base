@@ -28,7 +28,7 @@ import com.android.systemui.res.R
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import javax.inject.Inject
 
-class WeatherViewSection
+class ExtraWeatherViewSection
 @Inject
 constructor(
     val smartspaceController: LockscreenSmartspaceController,
@@ -37,7 +37,7 @@ constructor(
         if (!MigrateClocksToBlueprint.isEnabled) return
         if (smartspaceController.isEnabled) return
 
-        constraintLayout.findViewById<View?>(R.id.weather_container)?.let {
+        constraintLayout.findViewById<View?>(R.id.extra_weather_container)?.let {
             (it.parent as ViewGroup).removeView(it)
             constraintLayout.addView(it)
         }
@@ -50,21 +50,21 @@ constructor(
 
         constraintSet.apply {
             connect(
-                R.id.weather_container,
+                R.id.extra_weather_container,
                 ConstraintSet.START,
                 R.id.keyguard_slice_view,
                 ConstraintSet.START
             )
             connect(
-                R.id.weather_container,
+                R.id.extra_weather_container,
                 ConstraintSet.END,
                 ConstraintSet.PARENT_ID,
                 ConstraintSet.END
             )
-            constrainHeight(R.id.weather_container, ConstraintSet.WRAP_CONTENT)
+            constrainHeight(R.id.extra_weather_container, ConstraintSet.WRAP_CONTENT)
 
             connect(
-                R.id.weather_container,
+                R.id.extra_weather_container,
                 ConstraintSet.TOP,
                 R.id.keyguard_slice_view,
                 ConstraintSet.BOTTOM
@@ -74,7 +74,7 @@ constructor(
                 R.id.smart_space_barrier_bottom,
                 Barrier.BOTTOM,
                 0,
-                *intArrayOf(R.id.weather_container)
+                *intArrayOf(R.id.extra_weather_container)
             )
         }
     }
@@ -83,6 +83,6 @@ constructor(
         if (!MigrateClocksToBlueprint.isEnabled) return
         if (!smartspaceController.isEnabled) return
 
-        constraintLayout.removeView(R.id.weather_container)
+        constraintLayout.removeView(R.id.extra_weather_container)
     }
 }

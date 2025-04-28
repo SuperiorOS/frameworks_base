@@ -56,8 +56,8 @@
                android:layout_width="match_parent"
                android:layout_height="wrap_content" />
 
-        <include layout="@layout/current_weather_view"
-            android:id="@+id/weather_container"
+        <include layout="@layout/extra_weather_view"
+            android:id="@+id/extra_weather_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone" />

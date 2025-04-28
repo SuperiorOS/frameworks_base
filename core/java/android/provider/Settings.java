@@ -6483,12 +6483,7 @@ public final class Settings {
         /**
          * @hide
          */
-        public static final String LOCKSCREEN_WEATHER_WIND_INFO = "lockscreen_weather_wind_info";
-
-        /**
-         * @hide
-         */
-        public static final String LOCKSCREEN_WEATHER_HUMIDITY_INFO = "lockscreen_weather_humidity_info";
+        public static final String LOCKSCREEN_WEATHER_EXTRA_INFO = "lockscreen_weather_extra_info";
 
         /**
          * Whether to play notification sound and vibration if screen is ON

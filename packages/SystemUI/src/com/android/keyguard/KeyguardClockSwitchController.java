@@ -37,7 +37,7 @@ import androidx.annotation.NonNull;
 
 import com.android.systemui.Dependency;
 import com.android.systemui.Dumpable;
-import com.android.systemui.superior.CurrentWeatherView;
+import com.android.systemui.superior.ExtraWeatherView;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
@@ -115,7 +115,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
     private final KeyguardUnlockAnimationController mKeyguardUnlockAnimationController;
     private final InWindowLauncherUnlockAnimationManager mInWindowLauncherUnlockAnimationManager;
 
-    private CurrentWeatherView mCurrentWeatherView;
+    private ExtraWeatherView mExtraWeatherView;
     private boolean mShowWeather;
 
     private boolean mShownOnSecondaryDisplay = false;
@@ -243,7 +243,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
             mLargeClockFrame = mView
                 .findViewById(com.android.systemui.customization.R.id.lockscreen_clock_view_large);
         }
-        mCurrentWeatherView = mView.findViewById(R.id.weather_container);
+        mExtraWeatherView = mView.findViewById(R.id.extra_weather_container);
 
         if (!mOnlyClock) {
             mDumpManager.unregisterDumpable(getClass().getSimpleName()); // unregister previous
@@ -388,13 +388,13 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
 
     public void updateWeatherView() {
         mUiExecutor.execute(() -> {
-            if (mCurrentWeatherView != null) {
+            if (mExtraWeatherView != null) {
                 if (mShowWeather && !mOnlyClock) {
-                    mCurrentWeatherView.enableUpdates();
-                    mCurrentWeatherView.setVisibility(View.VISIBLE);
+                    mExtraWeatherView.enableUpdates();
+                    mExtraWeatherView.setVisibility(View.VISIBLE);
                 } else {
-                    mCurrentWeatherView.disableUpdates();
-                    mCurrentWeatherView.setVisibility(View.GONE);
+                    mExtraWeatherView.disableUpdates();
+                    mExtraWeatherView.setVisibility(View.GONE);
                 }
             }
         });
