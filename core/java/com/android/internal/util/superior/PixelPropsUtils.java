@@ -57,6 +57,7 @@ public final class PixelPropsUtils {
     private static final String SPOOF_PIXEL_GAMES = "persist.sys.pixelprops.games";
     private static final String SPOOF_PIXEL_GPHOTOS = "persist.sys.pixelprops.gphotos";
     private static final String SPOOF_PIXEL_NETFLIX = "persist.sys.pixelprops.netflix";
+    private static final String SPOOF_VENDING_SDK32_ENABLED = "persist.sys.spoof.vending_sdk32";
 
     private static final Map<String, Object> propsToChangeGeneric;
     private static final Map<String, Object> propsToChangePixel9ProXL;
@@ -182,7 +183,6 @@ public final class PixelPropsUtils {
             "com.proximabeta.mf.uamo"
     };
 
-    private static volatile boolean sIsFinsky = false;
     private static volatile List<String> sCertifiedProps = new ArrayList<>();
 
     static {
@@ -257,6 +257,13 @@ public final class PixelPropsUtils {
 
             Map<String, Object> propsToChange = new HashMap<>();
 
+            if (packageName.equals("com.android.vending")) {
+                if (SystemProperties.getBoolean(SPOOF_VENDING_SDK32_ENABLED, false)) {
+                    if (DEBUG) Log.d(TAG, "Spoofing SDK version for " + packageName + " to SDK " + 32);
+                    setVersionFieldInt("SDK_INT", 32);
+                    setVersionFieldString("RELEASE", "12");
+                }
+            }
             if (packageName.equals("com.google.android.apps.photos")) {
                 if (SystemProperties.getBoolean(SPOOF_PIXEL_GPHOTOS, true)) {
                     propsToChange.putAll(propsToChangePixelXL);
@@ -265,9 +272,6 @@ public final class PixelPropsUtils {
                         !SystemProperties.getBoolean(SPOOF_PIXEL_NETFLIX, false)) {
                     if (DEBUG) Log.d(TAG, "Netflix spoofing disabled by system prop");
                     return;
-            } else if (packageName.equals("com.android.vending")) {
-                sIsFinsky = true;
-                return;
             } else if (packageName.equals("com.google.android.gms")) {
                 final String processName = Application.getProcessName().toLowerCase();
                 if (processName.contains("unstable")) {
@@ -455,6 +459,28 @@ public final class PixelPropsUtils {
         return content.toString();
     }
 
+    private static void setVersionFieldString(String key, String value) {
+        try {
+            Field field = Build.VERSION.class.getDeclaredField(key);
+            field.setAccessible(true);
+            field.set(null, value);
+            field.setAccessible(false);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            Log.e(TAG, "Failed to spoof Build." + key, e);
+        }
+    }
+
+    private static void setVersionFieldInt(String key, int value) {
+        try {
+            Field field = Build.VERSION.class.getDeclaredField(key);
+            field.setAccessible(true);
+            field.set(null, value);
+            field.setAccessible(false);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            Log.e(TAG, "Failed to spoof Build." + key, e);
+        }
+    }
+
     private static boolean isCallerSafetyNet() {
         return Arrays.stream(Thread.currentThread().getStackTrace())
                         .anyMatch(elem -> elem.getClassName().toLowerCase()
@@ -465,9 +491,17 @@ public final class PixelPropsUtils {
         if (!SystemProperties.getBoolean(SPOOF_PIXEL_PI, true))
             return;
         // Check stack for SafetyNet or Play Integrity
-        if (isCallerSafetyNet() || sIsFinsky) {
+        if (isCallerSafetyNet()) {
             Log.i(TAG, "Blocked key attestation");
             throw new UnsupportedOperationException();
         }
+    }
+
+    public static boolean shouldBypassBroadcastReceiverValidation(String packageName) {
+        // Check if the app is whitelisted
+        if (!packageName.equals("com.android.vending")) {
+            return false;
+        }
+        return true;
     }
 }
