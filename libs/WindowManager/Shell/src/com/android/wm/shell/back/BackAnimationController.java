@@ -855,10 +855,10 @@ public class BackAnimationController implements RemoteCallable<BackAnimationCont
             } else {
                 tryDispatchOnBackCancelled(callback);
                 if (mTriggerLongSwipe) {
-                    sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, KeyEvent.FLAG_LONG_SWIPE);
+                    sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK,
+                            KeyEvent.FLAG_LONG_SWIPE);
                     sendEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, KeyEvent.FLAG_LONG_SWIPE);
                 }
-
             }
         }
         mRealCallbackInvoked = false;

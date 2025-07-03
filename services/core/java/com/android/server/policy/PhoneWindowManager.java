@@ -2279,6 +2279,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 break;
             case VOLUME_PANEL:
                 ActionUtils.toggleVolumePanel(mContext);
+                break;
+            case PLAY_PAUSE_MUSIC:
+                triggerVirtualKeypress(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                break;
             default:
                 break;
         }
