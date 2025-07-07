@@ -92,6 +92,7 @@ public class PropImitationHooks {
     private static final String PROP_FIRST_API_LEVEL = "persist.sys.pihooks.first_api_level";
 
     private static final String SPOOF_PIHOOKS_PI = "persist.sys.pihooks.pi";
+    private static final String SPOOF_PIHOOKS_PIXEL = "persist.sys.pihooks.pixel";
 
     private static final ComponentName GMS_ADD_ACCOUNT_ACTIVITY = ComponentName.unflattenFromString(
             "com.google.android.gms/.auth.uiflows.minutemaid.MinuteMaidActivity");
@@ -207,6 +208,22 @@ public class PropImitationHooks {
                 dlog("Setting certified props for: " + packageName + " process: " + processName);
                 setCertifiedPropsForGms(context);
                 return;
+            case PACKAGE_GPHOTOS:
+                dlog("Spoofing Pixel XL for Google Photos");
+                setProps(sPixelXLProps);
+                return;
+            case PACKAGE_NETFLIX:
+                if (!sNetflixModel.isEmpty()) {
+                    dlog("Setting model to " + sNetflixModel + " for Netflix");
+                    setPropValue("MODEL", sNetflixModel);;
+                }
+                return;
+        }
+
+        if (!SystemProperties.getBoolean(SPOOF_PIHOOKS_PIXEL, true))
+            return;
+
+        switch (processName) {
             case PROCESS_GMS_PERSISTENT:
             case PROCESS_GMS_GAPPS:
             case PROCESS_GMS_GSERVICE:
@@ -236,16 +253,6 @@ public class PropImitationHooks {
             case PACKAGE_WEATHER:
                 dlog("Spoofing Pixel 9 Pro XL for: " + packageName + " process: " + processName);
                 setProps(sPixelNineXLProps);
-                return;
-            case PACKAGE_GPHOTOS:
-                dlog("Spoofing Pixel XL for Google Photos");
-                setProps(sPixelXLProps);
-                return;
-            case PACKAGE_NETFLIX:
-                if (!sNetflixModel.isEmpty()) {
-                    dlog("Setting model to " + sNetflixModel + " for Netflix");
-                    setPropValue("MODEL", sNetflixModel);;
-                }
                 return;
             case PACKAGE_ARCORE:
                 if (!sStockFp.isEmpty()) {
