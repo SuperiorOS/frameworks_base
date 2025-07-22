@@ -56,6 +56,7 @@ import com.android.systemui.statusbar.policy.BluetoothController;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 import com.android.systemui.statusbar.window.StatusBarWindowControllerStore;
 import com.android.systemui.tuner.TunerService;
+import com.android.systemui.util.ScrimUtils;
 
 import dagger.Lazy;
 
@@ -154,6 +155,7 @@ public class Dependency {
     @Inject Lazy<StatusBarWindowControllerStore> mStatusBarWindowControllerStoreLazy;
     @Inject Lazy<SysUIStateDisplaysInteractor> mSysUIStateDisplaysInteractor;
     @Inject Lazy<LockscreenSmartspaceController> mLockscreenSmartspaceControllerLazy;
+    @Inject Lazy<ScrimUtils> mScrimUtils;
 
     @Inject
     public Dependency() {
@@ -203,6 +205,8 @@ public class Dependency {
                 StatusBarWindowControllerStore.class, mStatusBarWindowControllerStoreLazy::get);
         mProviders.put(LockscreenSmartspaceController.class,
                 mLockscreenSmartspaceControllerLazy::get);
+        mProviders.put(
+                ScrimUtils.class, mScrimUtils::get);
 
         Dependency.setInstance(this);
     }
