@@ -927,6 +927,9 @@ public class MediaControlPanel {
                 }
                 mArtworkBoundId = reqId;
 
+                MediaSessionManager.Companion.get().onAlbumArtChanged(albumArt);
+                MediaSessionManager.Companion.get().onMediaColorsChanged(colorScheme.getAccent1().getS100());
+
                 // Transition Colors to current color scheme
                 boolean colorSchemeChanged;
                 colorSchemeChanged = mColorSchemeTransition.updateColorScheme(colorScheme);
