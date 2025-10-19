@@ -14,6 +14,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Environment;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.android.server.SystemService;
@@ -35,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 public final class AttestationService extends SystemService {
 
     private static final String TAG = AttestationService.class.getSimpleName();
-    private static final String API = "https://raw.githubusercontent.com/PixelOS-AOSP/official_devices/refs/heads/sixteen/API/updater/CertifiedProps/certified_build_props.json";
+    private static final String API = "https://raw.githubusercontent.com/SuperiorOS/vendor_certification/refs/heads/16.2/gms_certified_props.json";
 
     private static final String DATA_FILE = "gms_certified_props.json";
 
@@ -47,13 +48,11 @@ public final class AttestationService extends SystemService {
             "persist.sys.pihooks.disable.gms_props", false);
 
     private final Context mContext;
-    private final File mDataFile;
     private final ScheduledExecutorService mScheduler;
 
     public AttestationService(Context context) {
         super(context);
         mContext = context;
-        mDataFile = new File(Environment.getDataSystemDirectory(), DATA_FILE);
         mScheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -68,33 +67,6 @@ public final class AttestationService extends SystemService {
             Log.i(TAG, "Scheduling the service");
             mScheduler.scheduleAtFixedRate(
                     new FetchGmsCertifiedProps(), INITIAL_DELAY, INTERVAL, TimeUnit.MINUTES);
-        }
-    }
-
-    private String readFromFile(File file) {
-        StringBuilder content = new StringBuilder();
-
-        if (file.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    content.append(line);
-                }
-            } catch (IOException e) {
-                Log.e(TAG, "Error reading from file", e);
-            }
-        }
-        return content.toString();
-    }
-
-    private void writeToFile(File file, String data) {
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(data);
-            // Set -rw-r--r-- (644) permission to make it readable by others.
-            file.setReadable(true, false);
-        } catch (IOException e) {
-            Log.e(TAG, "Error writing to file", e);
         }
     }
 
@@ -155,12 +127,12 @@ public final class AttestationService extends SystemService {
                     return;
                 }
 
-                String savedProps = readFromFile(mDataFile);
+                String savedProps = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.FETCHED_PIF);
                 String props = fetchProps();
 
                 if (props != null && !savedProps.equals(props)) {
                     dlog("Found new props");
-                    writeToFile(mDataFile, props);
+                    Settings.Secure.putString(mContext.getContentResolver(), Settings.Secure.FETCHED_PIF, props);
                     dlog("FetchGmsCertifiedProps completed");
                 } else {
                     dlog("No change in props");
