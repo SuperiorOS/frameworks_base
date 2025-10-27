@@ -336,10 +336,10 @@ public class KeyguardSliceProvider extends SliceProvider implements
     }
 
     protected void addWeatherLocked(ListBuilder builder) {
-        if (!mShowWeatherSlice || !mWeatherClient.isOmniJawsEnabled() || mWeatherData == null) {
+        if (!mShowWeatherSlice || !mWeatherClient.isOmniJawsEnabled(getContext()) || mWeatherData == null) {
             return;
         }
-        IconCompat weatherIcon = SliceViewUtil.createIconFromDrawable(mWeatherClient.getWeatherConditionImage(mWeatherData.conditionCode));
+        IconCompat weatherIcon = SliceViewUtil.createIconFromDrawable(mWeatherClient.getWeatherConditionImage(getContext(),mWeatherData.conditionCode));
         RowBuilder weatherRowBuilder = new RowBuilder(mWeatherUri)
                 .setTitle(mWeatherData.temp + " " + mWeatherData.tempUnits + " " + mWeatherData.city)
                 .addEndItem(weatherIcon, ListBuilder.ICON_IMAGE);
@@ -621,14 +621,14 @@ public class KeyguardSliceProvider extends SliceProvider implements
     }
 
     private void enableWeatherUpdates() {
-        mWeatherClient = new OmniJawsClient(getContext());
-        mWeatherClient.addObserver(this);
+        mWeatherClient = new OmniJawsClient();
+        mWeatherClient.get().addObserver(getContext(), this);
         queryAndUpdateWeather();
     }
 
     private void disableWeatherUpdates() {
         if (mWeatherClient != null) {
-            mWeatherClient.removeObserver(this);
+            mWeatherClient.get().removeObserver(getContext(), this);
         }
     }
 
@@ -657,7 +657,7 @@ public class KeyguardSliceProvider extends SliceProvider implements
 
     private void queryAndUpdateWeather() {
         if (mWeatherClient != null) {
-            mWeatherClient.queryWeather();
+            mWeatherClient.queryWeather(getContext());
             mWeatherData = mWeatherClient.getWeatherInfo();
             notifyChange();
         }
