@@ -51,4 +51,6 @@
     <!-- Device model (Build.MODEL) to spoof for netflix, if not empty -->
     <string name="config_netflixSpoofModel" translatable="false"></string>
 
+   <!-- API URL to fetch PIF from -->
+   <string name="config_pifUpdateUrl" translatable="false">https://raw.githubusercontent.com/SuperiorOS/vendor_certification/refs/heads/16.2/gms_certified_props.json</string>
 </resources>
