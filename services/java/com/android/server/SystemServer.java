@@ -1687,6 +1687,14 @@ public final class SystemServer implements Dumpable {
             mSystemServiceManager.startService(DropBoxManagerService.class);
             t.traceEnd();
 
+            t.traceBegin("InitVBMetaDigest");
+            try {
+                android.security.trickystore.AttestationUtils.initBootHash();
+            } catch (Throwable e) {
+                Slog.e(TAG, "Failed to init VBMeta digest", e);
+            }
+            t.traceEnd();
+
             if (android.permission.flags.Flags.enhancedConfirmationModeApisEnabled()) {
                 t.traceBegin("StartEnhancedConfirmationService");
                 mSystemServiceManager.startService(ENHANCED_CONFIRMATION_SERVICE_CLASS);
