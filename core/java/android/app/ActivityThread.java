@@ -195,6 +195,7 @@ import android.se.omapi.SeFrameworkInitializer;
 import android.se.omapi.SeServiceManager;
 import android.security.NetworkSecurityPolicy;
 import android.security.net.config.NetworkSecurityConfigProvider;
+import android.security.pif.PlayIntegritySpoofService;
 import android.system.ErrnoException;
 import android.telephony.TelephonyFrameworkInitializer;
 import android.util.AndroidRuntimeException;
@@ -8167,6 +8168,27 @@ public final class ActivityThread extends ClientTransactionHandler
         final IActivityManager mgr = ActivityManager.getService();
         final ContextImpl appContext = ContextImpl.createAppContext(this, data.info);
         mConfigurationController.updateLocaleListFromAppContext(appContext);
+
+        if (PlayIntegritySpoofService.isTargetProcess(data.processName)) {
+            PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();
+            if (pifService.shouldSpoof(data.processName)) {
+                pifService.spoofBuildFields(data.processName);
+                if (pifService.isDroidGuard(data.processName)) {
+                    pifService.spoofProperties();
+                    if (pifService.isSpoofProviderEnabled()) {
+                        pifService.spoofProvider();
+                    }
+                    if (pifService.isSpoofSignatureEnabled()) {
+                        pifService.spoofSignature();
+                    }
+                }
+            }
+        } else if (PlayIntegritySpoofService.isPhotosPackage(data.appInfo.packageName)) {
+            PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();
+            if (pifService.shouldSpoofPhotos(data.appInfo.packageName)) {
+                pifService.spoofPhotosProps();
+            }
+        }
 
         // Initialize the default http proxy in this process.
         Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");

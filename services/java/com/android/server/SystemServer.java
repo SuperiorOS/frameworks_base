@@ -284,6 +284,7 @@ import com.android.server.soundtrigger.SoundTriggerService;
 import com.android.server.soundtrigger_middleware.SoundTriggerMiddlewareService;
 import com.android.server.speech.SpeechRecognitionManagerService;
 import com.android.server.stats.binder.BinderStatsConsumerService;
+import com.android.server.spoof.SpoofManagerService;
 import com.android.server.stats.bootstrap.StatsBootstrapAtomService;
 import com.android.server.stats.pull.StatsPullAtomService;
 import com.android.server.statusbar.StatusBarManagerService;
@@ -1437,6 +1438,10 @@ public final class SystemServer implements Dumpable {
         // Manages Overlay packages
         t.traceBegin("StartOverlayManagerService");
         mSystemServiceManager.startService(new OverlayManagerService(mSystemContext));
+        t.traceEnd();
+
+        t.traceBegin("StartSpoofManagerService");
+        mSystemServiceManager.startService(SpoofManagerService.class);
         t.traceEnd();
 
         // Manages Resources packages

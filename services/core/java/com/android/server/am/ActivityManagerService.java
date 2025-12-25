@@ -539,6 +539,7 @@ import com.android.server.power.stats.BatteryStatsImpl;
 import com.android.server.privatecompute.PccSandboxManagerInternal;
 import com.android.server.privatecompute.PrivateComputeStatsLogUtil;
 import com.android.server.sdksandbox.SdkSandboxManagerLocal;
+import com.android.server.spoof.SpoofManagerInternal;
 import com.android.server.stats.pull.StatsPullAtomService;
 import com.android.server.stats.pull.StatsPullAtomServiceInternal;
 import com.android.server.uri.GrantUri;
@@ -21154,6 +21155,16 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
         return token;
+    }
+
+    private SpoofManagerInternal getSpoofManager() {
+        return LocalServices.getService(SpoofManagerInternal.class);
+    }
+    
+    @Override
+    public String getSpoofPifConfig() {
+        final SpoofManagerInternal service = getSpoofManager();
+        return service != null ? service.getPifConfig() : null;
     }
 
     /** Helper method for sending profiling triggers asynchronously. */
