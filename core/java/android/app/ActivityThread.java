@@ -193,6 +193,7 @@ import android.ravenwood.annotation.RavenwoodThrow;
 import android.renderscript.RenderScriptCacheDir;
 import android.se.omapi.SeFrameworkInitializer;
 import android.se.omapi.SeServiceManager;
+import android.security.appprops.AppPropsSpoofService;
 import android.security.NetworkSecurityPolicy;
 import android.security.net.config.NetworkSecurityConfigProvider;
 import android.security.pif.PlayIntegritySpoofService;
@@ -8190,6 +8191,11 @@ public final class ActivityThread extends ClientTransactionHandler
             }
         }
 
+        AppPropsSpoofService appPropsService = AppPropsSpoofService.getInstance();
+        if (appPropsService.isEnabled()) {
+            appPropsService.spoofForPackage(data.appInfo.packageName);
+        }
+        
         // Initialize the default http proxy in this process.
         Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");
         try {

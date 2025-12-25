@@ -21,4 +21,6 @@ public interface SpoofManagerInternal {
     String getTrickyStoreTarget();
     String getTrickyStoreKeyBox();
     String getTrickyStorePatch();
+
+    String getAppPropsConfig();
 }
