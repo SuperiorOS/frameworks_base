@@ -44,6 +44,7 @@ public final class SpoofManagerService extends SystemService {
     private static final String[] WATCHED_KEYS = {
             Settings.Secure.SPOOF_PIF_CONFIG,
             Settings.Secure.SPOOF_PIF_PHOTOS,
+            Settings.Secure.SPOOF_APPPROPS_CONFIG,
             Settings.Secure.SPOOF_TRICKYSTORE_TARGET,
             Settings.Secure.SPOOF_TRICKYSTORE_KEYBOX,
             Settings.Secure.SPOOF_TRICKYSTORE_PATCH,
@@ -254,6 +255,11 @@ public final class SpoofManagerService extends SystemService {
         @Override
         public String getPifPhotos() {
             return getCached(Settings.Secure.SPOOF_PIF_PHOTOS);
+        }
+
+        @Override
+        public String getAppPropsConfig() {
+            return getCached(Settings.Secure.SPOOF_APPPROPS_CONFIG);
         }
 
         @Override

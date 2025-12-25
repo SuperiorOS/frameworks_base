@@ -193,6 +193,7 @@ import android.ravenwood.annotation.RavenwoodThrow;
 import android.renderscript.RenderScriptCacheDir;
 import android.se.omapi.SeFrameworkInitializer;
 import android.se.omapi.SeServiceManager;
+import android.security.appprops.AppPropsSpoofService;
 import android.security.NetworkSecurityPolicy;
 import android.security.net.config.NetworkSecurityConfigProvider;
 import android.security.pif.PlayIntegritySpoofService;
@@ -8168,6 +8169,11 @@ public final class ActivityThread extends ClientTransactionHandler
         final IActivityManager mgr = ActivityManager.getService();
         final ContextImpl appContext = ContextImpl.createAppContext(this, data.info);
         mConfigurationController.updateLocaleListFromAppContext(appContext);
+
+        AppPropsSpoofService appPropsService = AppPropsSpoofService.getInstance();
+        if (appPropsService.isEnabled()) {
+            appPropsService.spoofForPackage(data.appInfo.packageName);
+        }
 
         if (PlayIntegritySpoofService.isTargetProcess(data.processName)) {
             PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();

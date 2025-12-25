@@ -14277,7 +14277,12 @@ public final class Settings {
          * @hide
          */
         public static final String SPOOF_TRICKYSTORE_PATCH = "spoof_trickystore_patch";
-        
+
+        /**
+         * @hide
+         */
+        public static final String SPOOF_APPPROPS_CONFIG = "spoof_appprops_config";
+
         /**
          * These entries are considered common between the personal and the managed profile,
          * since the managed profile doesn't get to change them.
