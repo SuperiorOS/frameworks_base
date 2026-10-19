@@ -130,7 +130,7 @@ public final class PlayIntegritySpoofService {
     private volatile boolean mSpoofSignature = false;
     private volatile boolean mSpoofVendingBuild = true;
     private volatile boolean mSpoofVendingSdk = false;
-    private volatile boolean mSpoofPhotos = false;
+    private volatile boolean mSpoofPhotos = true;
     private volatile boolean mDebug = false;
 
     private final Map<String, String> mBuildFields = new ConcurrentHashMap<>();
@@ -165,12 +165,16 @@ public final class PlayIntegritySpoofService {
         }
 
         String content;
+        String spoofPhotos;
         try {
             content = service.getSpoofPifConfig();
+            spoofPhotos = service.getSpoofPifPhotos();
         } catch (Throwable e) {
             Log.e(TAG, "Failed to fetch PIF config from system_server", e);
             return;
         }
+
+        mSpoofPhotos = "1".equals(spoofPhotos) || "true".equalsIgnoreCase(spoofPhotos);
 
         if (content == null || content.isEmpty()) {
             Log.w(TAG, "No PIF config in Settings.Secure");
@@ -262,9 +266,6 @@ public final class PlayIntegritySpoofService {
                 break;
             case "spoofVendingSdk":
                 mSpoofVendingSdk = "1".equals(value) || "true".equalsIgnoreCase(value);
-                break;
-            case "spoofPhotos":
-                mSpoofPhotos = "1".equals(value) || "true".equalsIgnoreCase(value);
                 break;
             case "DEBUG":
                 mDebug = "1".equals(value) || "true".equalsIgnoreCase(value);
@@ -665,7 +666,7 @@ public final class PlayIntegritySpoofService {
     }
 
     public boolean shouldSpoofPhotos(String packageName) {
-        return mConfigLoaded && mSpoofPhotos && isPhotosPackage(packageName);
+        return mSpoofPhotos && isPhotosPackage(packageName);
     }
 
     public void spoofPhotosProps() {

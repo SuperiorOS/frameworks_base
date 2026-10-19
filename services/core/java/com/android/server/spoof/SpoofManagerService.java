@@ -36,6 +36,7 @@ public final class SpoofManagerService extends SystemService {
 
     private static final String[] WATCHED_KEYS = {
             Settings.Secure.SPOOF_PIF_CONFIG,
+            Settings.Secure.SPOOF_PIF_PHOTOS,
     };
 
     private final ContentResolver mResolver;
@@ -151,6 +152,11 @@ public final class SpoofManagerService extends SystemService {
         @Override
         public String getPifConfig() {
             return getCached(Settings.Secure.SPOOF_PIF_CONFIG);
+        }
+
+        @Override
+        public String getPifPhotos() {
+            return getCached(Settings.Secure.SPOOF_PIF_PHOTOS);
         }
     }
 }

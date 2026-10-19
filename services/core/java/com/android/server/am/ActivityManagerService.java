@@ -21167,6 +21167,12 @@ public class ActivityManagerService extends IActivityManager.Stub
         return service != null ? service.getPifConfig() : null;
     }
 
+    @Override
+    public String getSpoofPifPhotos() {
+        final SpoofManagerInternal service = getSpoofManager();
+        return service != null ? service.getPifPhotos() : null;
+    }
+
     /** Helper method for sending profiling triggers asynchronously. */
     // TODO: b/465855549 - Refactor profiling logic out of ActivityManagerService
     public void sendProfilingTrigger(int uid, @NonNull String packageName, int triggerType) {
