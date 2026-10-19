@@ -242,6 +242,9 @@ public final class PlayIntegritySpoofService {
         String content;
         try {
             content = service.getSpoofPifConfig();
+            String spoofPhotos = service.getSpoofPifPhotos();
+            mSpoofPhotos = spoofPhotos == null || "1".equals(spoofPhotos)
+                            || "true".equalsIgnoreCase(spoofPhotos);
         } catch (Throwable e) {
             if (!mLoadFailureLogged) {
                 mLoadFailureLogged = true;
@@ -383,9 +386,6 @@ public final class PlayIntegritySpoofService {
                 break;
             case "spoofVendingSdk":
                 mSpoofVendingSdk = "1".equals(value) || "true".equalsIgnoreCase(value);
-                break;
-            case "spoofPhotos":
-                mSpoofPhotos = "1".equals(value) || "true".equalsIgnoreCase(value);
                 break;
             case "DEBUG":
                 mDebug = "1".equals(value) || "true".equalsIgnoreCase(value);
@@ -943,7 +943,7 @@ public final class PlayIntegritySpoofService {
     public boolean shouldSpoofPhotos(String packageName) {
         if (!isPhotosPackage(packageName)) return false;
         ensureLoaded();
-        return mConfigLoaded && mSpoofPhotos;
+        return mSpoofPhotos;
     }
 
     public void spoofPhotosProps() {

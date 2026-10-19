@@ -17,4 +17,6 @@ package com.android.server.spoof;
 
 public interface SpoofManagerInternal {
     String getPifConfig();
+
+    String getPifPhotos();
 }

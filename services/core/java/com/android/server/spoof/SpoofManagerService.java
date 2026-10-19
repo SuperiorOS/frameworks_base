@@ -37,9 +37,11 @@ public final class SpoofManagerService extends SystemService {
 
     private static final String VENDING_PACKAGE = "com.android.vending";
     private static final String DROIDGUARD_PROCESS = "com.google.android.gms.unstable";
+    private static final String PHOTOS_PACKAGE = "com.google.android.apps.photos";
 
     private static final String[] WATCHED_KEYS = {
             Settings.Secure.SPOOF_PIF_CONFIG,
+            Settings.Secure.SPOOF_PIF_PHOTOS,
     };
 
     private final ContentResolver mResolver;
@@ -75,6 +77,7 @@ public final class SpoofManagerService extends SystemService {
             refreshAll();
             Slog.i(TAG, "Spoof config reloaded for user " + userId);
             restartPifTargets();
+            restartPhotos();
         });
     }
 
@@ -110,6 +113,8 @@ public final class SpoofManagerService extends SystemService {
                 Slog.i(TAG, "Spoof config refreshed: " + key);
                 if (Settings.Secure.SPOOF_PIF_CONFIG.equals(key)) {
                     restartPifTargets();
+                } else if (Settings.Secure.SPOOF_PIF_PHOTOS.equals(key)) {
+                    restartPhotos();
                 }
             }
         };
@@ -158,6 +163,19 @@ public final class SpoofManagerService extends SystemService {
         }
     }
 
+    /** Restarts Google Photos so it picks up a new Photos spoofing state. */
+    private void restartPhotos() {
+        try {
+            ActivityManager am = getContext().getSystemService(ActivityManager.class);
+            if (am == null) {
+                return;
+            }
+            killProcesses(am, PHOTOS_PACKAGE, true);
+        } catch (Throwable t) {
+            Slog.w(TAG, "Failed to restart Photos", t);
+        }
+    }
+
     /**
      * Kills processes of the current user whose name equals {@code name} or, when
      * {@code includeSubProcesses} is set, starts with {@code name + ":"}.
@@ -186,6 +204,11 @@ public final class SpoofManagerService extends SystemService {
         @Override
         public String getPifConfig() {
             return getCached(Settings.Secure.SPOOF_PIF_CONFIG);
+        }
+
+        @Override
+        public String getPifPhotos() {
+            return getCached(Settings.Secure.SPOOF_PIF_PHOTOS);
         }
 
     }
