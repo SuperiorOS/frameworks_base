@@ -46,7 +46,7 @@ public class KeyBoxManager {
     private static final Pattern PEM_HEADER = Pattern.compile("-----BEGIN ([^-]+)-----");
     private static final Pattern XML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
 
-    private final Map<String, KeyBox> mKeyboxes = new ConcurrentHashMap<>();
+    private volatile Map<String, KeyBox> mKeyboxes = new ConcurrentHashMap<>();
 
     /** @hide */
     public static class KeyBox {
@@ -69,14 +69,18 @@ public class KeyBoxManager {
     }
 
     public KeyBox getKeybox(String algorithm) {
-        return mKeyboxes.get(algorithm);
+        KeyBox kb = mKeyboxes.get(algorithm);
+        if (kb != null) return kb;
+        return mKeyboxes.values().stream().findFirst().orElse(null);
     }
 
     public void parseKeybox(String xmlContent) {
         mKeyboxes.clear();
         if (xmlContent == null || xmlContent.isEmpty()) {
+            mKeyboxes.clear();
             return;
         }
+        Map<String, KeyBox> candidate = new ConcurrentHashMap<>();
 
         try {
             xmlContent = sanitizeXml(xmlContent);
@@ -85,9 +89,9 @@ public class KeyBoxManager {
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
             parser.setInput(new StringReader(xmlContent));
 
-            int currentKeyIndex = -1;
             String currentAlgorithm = null;
             String privateKeyPem = null;
+            StringBuilder textBuilder = new StringBuilder();
             List<String> certificatePems = new ArrayList<>();
             boolean inKey = false;
             boolean inPrivateKey = false;
@@ -102,41 +106,45 @@ public class KeyBoxManager {
                     case XmlPullParser.START_TAG:
                         if ("Key".equals(tagName)) {
                             inKey = true;
-                            currentKeyIndex++;
                             currentAlgorithm = parser.getAttributeValue(null, "algorithm");
                             privateKeyPem = null;
                             certificatePems.clear();
                         } else if ("PrivateKey".equals(tagName) && inKey) {
                             inPrivateKey = true;
+                            textBuilder.setLength(0);
                         } else if ("CertificateChain".equals(tagName) && inKey) {
                             inCertificateChain = true;
                         } else if ("Certificate".equals(tagName) && inCertificateChain) {
                             inCertificate = true;
+                            textBuilder.setLength(0);
                         }
                         break;
 
                     case XmlPullParser.TEXT:
-                        String text = parser.getText().trim();
-                        if (!text.isEmpty()) {
-                            if (inPrivateKey) {
-                                privateKeyPem = text;
-                            } else if (inCertificate) {
-                                certificatePems.add(text);
-                            }
+                        if ((inPrivateKey || inCertificate) && parser.getText() != null) {
+                            textBuilder.append(parser.getText());
                         }
                         break;
 
                     case XmlPullParser.END_TAG:
                         if ("PrivateKey".equals(tagName)) {
+                            String text = textBuilder.toString().trim();
+                            if (!text.isEmpty()) {
+                                privateKeyPem = text;
+                            }
                             inPrivateKey = false;
                         } else if ("Certificate".equals(tagName)) {
+                            String text = textBuilder.toString().trim();
+                            if (!text.isEmpty()) {
+                                certificatePems.add(text);
+                            }
                             inCertificate = false;
                         } else if ("CertificateChain".equals(tagName)) {
                             inCertificateChain = false;
                         } else if ("Key".equals(tagName)) {
                             inKey = false;
                             if (currentAlgorithm != null && privateKeyPem != null && !certificatePems.isEmpty()) {
-                                processKeybox(currentAlgorithm, privateKeyPem, certificatePems);
+                                processKeybox(candidate, currentAlgorithm, privateKeyPem, certificatePems);
                             }
                         }
                         break;
@@ -145,13 +153,18 @@ public class KeyBoxManager {
                 eventType = parser.next();
             }
 
-            Log.i(TAG, "Parsed " + mKeyboxes.size() + " keyboxes");
+            if (!candidate.isEmpty()) {
+                mKeyboxes = candidate;
+                Log.i(TAG, "Parsed " + mKeyboxes.size() + " keyboxes");
+            } else {
+                Log.w(TAG, "No valid keys parsed from XML, retaining previous keyboxes");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse keybox XML", e);
         }
     }
 
-    private void processKeybox(String algorithm, String privateKeyPem, List<String> certificatePems) {
+    private void processKeybox(Map<String, KeyBox> target, String algorithm, String privateKeyPem, List<String> certificatePems) {
         try {
             String normalizedAlgorithm;
             switch (algorithm.toLowerCase()) {
@@ -179,7 +192,7 @@ public class KeyBoxManager {
             if (!certificates.isEmpty()) {
                 PublicKey publicKey = ((X509Certificate) certificates.get(0)).getPublicKey();
                 KeyPair keyPair = new KeyPair(publicKey, privateKey);
-                mKeyboxes.put(normalizedAlgorithm, new KeyBox(keyPair, certificates));
+                target.put(normalizedAlgorithm, new KeyBox(keyPair, certificates));
                 Log.i(TAG, "Added keybox for algorithm: " + normalizedAlgorithm);
             }
         } catch (Exception e) {

@@ -11,6 +11,7 @@ import com.android.internal.org.bouncycastle.asn1.*;
 import java.io.ByteArrayInputStream;
 import java.security.*;
 import java.security.cert.*;
+import java.time.LocalDate;
 
 /**
  * @hide
@@ -34,9 +35,27 @@ public final class AttestationUtils {
 
     public static byte[] getBootKey() {
         if (sBootKey == null) {
+            sBootKey = getBootKeyFromProp();
+        }
+        if (sBootKey == null && !sTeeBroken) {
+            extractBootHashFromTee();
+        }
+        if (sBootKey == null) {
             sBootKey = generateRandomBytes(32);
         }
         return sBootKey;
+    }
+
+    public static byte[] getBootKeyFromProp() {
+        String digest = SystemProperties.get("ro.boot.vbmeta.public_key_digest", null);
+        if (digest == null || digest.length() != 64) {
+            return null;
+        }
+        try {
+            return hexStringToByteArray(digest);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static byte[] getBootHash() {
@@ -130,6 +149,12 @@ public final class AttestationUtils {
                 if (tagged.getTagNo() == 704) {
                     ASN1Sequence rootOfTrust = (ASN1Sequence) tagged.getBaseObject();
                     if (rootOfTrust.size() >= 4) {
+                        if (sBootKey == null) {
+                            byte[] key = ((ASN1OctetString) rootOfTrust.getObjectAt(0)).getOctets();
+                            if (isNonZero(key)) {
+                                sBootKey = key;
+                            }
+                        }
                         ASN1OctetString bootHashOctet = (ASN1OctetString) rootOfTrust.getObjectAt(3);
                         byte[] hash = bootHashOctet.getOctets();
                         Log.i(TAG, "Extracted boot hash from TEE: " + bytesToHex(hash));
@@ -144,6 +169,14 @@ public final class AttestationUtils {
             Log.e(TAG, "Failed to extract boot hash from TEE", e);
             return null;
         }
+    }
+
+    private static boolean isNonZero(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) return false;
+        for (byte b : bytes) {
+            if (b != 0) return true;
+        }
+        return false;
     }
 
     public static byte[] getBootHashFromProp() {
@@ -168,7 +201,7 @@ public final class AttestationUtils {
             case Build.VERSION_CODES.TIRAMISU: return 130000;
             case Build.VERSION_CODES.UPSIDE_DOWN_CAKE: return 140000;
             case Build.VERSION_CODES.VANILLA_ICE_CREAM: return 150000;
-            default: return 160000;
+            default: return Build.VERSION.SDK_INT >= 37 ? 170000 : 160000;
         }
     }
 
@@ -186,7 +219,7 @@ public final class AttestationUtils {
             case Build.VERSION_CODES.VANILLA_ICE_CREAM:
                 return 300;
             default:
-                return 400;
+                return Build.VERSION.SDK_INT >= 37 ? 500 : 400;
         }
     }
 
@@ -229,6 +262,11 @@ public final class AttestationUtils {
         if (value == null || value.equalsIgnoreCase("no") || value.equalsIgnoreCase("prop")) {
             return null;
         }
+        LocalDate now = LocalDate.now();
+        value = value.toUpperCase()
+                .replace("YYYY", String.format("%04d", now.getYear()))
+                .replace("MM", String.format("%02d", now.getMonthValue()))
+                .replace("DD", String.format("%02d", now.getDayOfMonth()));
 
         String normalized = value.replace("-", "");
         try {
