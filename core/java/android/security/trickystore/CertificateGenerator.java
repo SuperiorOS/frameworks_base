@@ -43,6 +43,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -74,6 +75,8 @@ public final class CertificateGenerator {
         public String ecCurveName;
         public List<Integer> purpose = new ArrayList<>();
         public List<Integer> digest = new ArrayList<>();
+        public List<Integer> padding = new ArrayList<>();
+        public List<Integer> mgfDigest = new ArrayList<>();
         public byte[] attestationChallenge;
         public byte[] brand;
         public byte[] device;
@@ -178,7 +181,19 @@ public final class CertificateGenerator {
             publicKeyInfo
         );
 
-        builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign));
+        int keyUsageBits = 0;
+        for (int p : params.purpose) {
+            switch (p) {
+                case 2: keyUsageBits |= KeyUsage.digitalSignature; break;
+                case 1: keyUsageBits |= KeyUsage.dataEncipherment; break;
+                case 5: keyUsageBits |= KeyUsage.keyEncipherment; break;
+                case 6: keyUsageBits |= KeyUsage.keyAgreement; break;
+                case 7: keyUsageBits |= KeyUsage.keyCertSign; break;
+            }
+        }
+        if (keyUsageBits != 0) {
+            builder.addExtension(Extension.keyUsage, true, new KeyUsage(keyUsageBits));
+        }
         builder.addExtension(buildAttestExtension(params, securityLevel, uid));
 
         String sigAlg = params.algorithm == 3 ? "SHA256withECDSA" : "SHA256withRSA";
@@ -207,55 +222,85 @@ public final class CertificateGenerator {
             };
             DERSequence rootOfTrust = new DERSequence(rootOfTrustElements);
 
-            ASN1EncodableVector teeEnforced = new ASN1EncodableVector();
+            List<DERTaggedObject> teeList = new ArrayList<>();
 
-            ASN1Integer[] purposes = new ASN1Integer[params.purpose.size()];
-            for (int i = 0; i < params.purpose.size(); i++) {
-                purposes[i] = new ASN1Integer(params.purpose.get(i));
+            if (!params.purpose.isEmpty()) {
+                ASN1Integer[] purposes = new ASN1Integer[params.purpose.size()];
+                for (int i = 0; i < params.purpose.size(); i++) {
+                    purposes[i] = new ASN1Integer(params.purpose.get(i));
+                }
+                teeList.add(new DERTaggedObject(true, 1, new DERSet(purposes)));
             }
-            teeEnforced.add(new DERTaggedObject(true, 1, new DERSet(purposes)));
-            teeEnforced.add(new DERTaggedObject(true, 2, new ASN1Integer(params.algorithm)));
-            teeEnforced.add(new DERTaggedObject(true, 3, new ASN1Integer(params.keySize)));
+            teeList.add(new DERTaggedObject(true, 2, new ASN1Integer(params.algorithm)));
+            teeList.add(new DERTaggedObject(true, 3, new ASN1Integer(params.keySize)));
 
-            ASN1Integer[] digests = new ASN1Integer[params.digest.size()];
-            for (int i = 0; i < params.digest.size(); i++) {
-                digests[i] = new ASN1Integer(params.digest.get(i));
+            if (!params.digest.isEmpty()) {
+                ASN1Integer[] digests = new ASN1Integer[params.digest.size()];
+                for (int i = 0; i < params.digest.size(); i++) {
+                    digests[i] = new ASN1Integer(params.digest.get(i));
+                }
+                teeList.add(new DERTaggedObject(true, 5, new DERSet(digests)));
             }
-            teeEnforced.add(new DERTaggedObject(true, 5, new DERSet(digests)));
+            if (!params.padding.isEmpty()) {
+                ASN1Integer[] paddings = new ASN1Integer[params.padding.size()];
+                for (int i = 0; i < params.padding.size(); i++) {
+                    paddings[i] = new ASN1Integer(params.padding.get(i));
+                }
+                teeList.add(new DERTaggedObject(true, 6, new DERSet(paddings)));
+            }
+            if (params.algorithm == 3) {
+                teeList.add(new DERTaggedObject(true, 10, new ASN1Integer(params.ecCurve)));
+            } else if (params.algorithm == 1) {
+                BigInteger exp = params.rsaPublicExponent != null
+                        ? params.rsaPublicExponent : RSAKeyGenParameterSpec.F4;
+                teeList.add(new DERTaggedObject(true, 200, new ASN1Integer(exp)));
+                if (!params.mgfDigest.isEmpty() && AttestationUtils.getAttestVersion() >= 100) {
+                    ASN1Integer[] mgf = new ASN1Integer[params.mgfDigest.size()];
+                    for (int i = 0; i < params.mgfDigest.size(); i++) {
+                        mgf[i] = new ASN1Integer(params.mgfDigest.get(i));
+                    }
+                    teeList.add(new DERTaggedObject(true, 203, new DERSet(mgf)));
+                }
+            }
 
-            teeEnforced.add(new DERTaggedObject(true, 10, new ASN1Integer(params.ecCurve)));
-            teeEnforced.add(new DERTaggedObject(true, 503, DERNull.INSTANCE));
-            teeEnforced.add(new DERTaggedObject(true, 702, new ASN1Integer(0)));
-            teeEnforced.add(new DERTaggedObject(true, 704, rootOfTrust));
-            teeEnforced.add(new DERTaggedObject(true, 705, new ASN1Integer(AttestationUtils.getOsVersion())));
-            teeEnforced.add(new DERTaggedObject(true, 706, new ASN1Integer(AttestationUtils.getPatchLevel(false))));
-            teeEnforced.add(new DERTaggedObject(true, 718, new ASN1Integer(AttestationUtils.getVendorPatchLevel(true))));
-            teeEnforced.add(new DERTaggedObject(true, 719, new ASN1Integer(AttestationUtils.getBootPatchLevel(true))));
+            teeList.add(new DERTaggedObject(true, 503, DERNull.INSTANCE));
+            teeList.add(new DERTaggedObject(true, 702, new ASN1Integer(0)));
+            teeList.add(new DERTaggedObject(true, 704, rootOfTrust));
+            teeList.add(new DERTaggedObject(true, 705, new ASN1Integer(AttestationUtils.getOsVersion())));
+            teeList.add(new DERTaggedObject(true, 706, new ASN1Integer(AttestationUtils.getPatchLevel(false))));
+            teeList.add(new DERTaggedObject(true, 718, new ASN1Integer(AttestationUtils.getVendorPatchLevel(true))));
+            teeList.add(new DERTaggedObject(true, 719, new ASN1Integer(AttestationUtils.getBootPatchLevel(true))));
 
             if (params.brand != null) {
-                teeEnforced.add(new DERTaggedObject(true, 710, new DEROctetString(params.brand)));
+                teeList.add(new DERTaggedObject(true, 710, new DEROctetString(params.brand)));
             }
             if (params.device != null) {
-                teeEnforced.add(new DERTaggedObject(true, 711, new DEROctetString(params.device)));
+                teeList.add(new DERTaggedObject(true, 711, new DEROctetString(params.device)));
             }
             if (params.product != null) {
-                teeEnforced.add(new DERTaggedObject(true, 712, new DEROctetString(params.product)));
+                teeList.add(new DERTaggedObject(true, 712, new DEROctetString(params.product)));
             }
             if (params.manufacturer != null) {
-                teeEnforced.add(new DERTaggedObject(true, 716, new DEROctetString(params.manufacturer)));
+                teeList.add(new DERTaggedObject(true, 716, new DEROctetString(params.manufacturer)));
             }
             if (params.model != null) {
-                teeEnforced.add(new DERTaggedObject(true, 717, new DEROctetString(params.model)));
+                teeList.add(new DERTaggedObject(true, 717, new DEROctetString(params.model)));
             }
 
+            teeList.sort(Comparator.comparingInt(DERTaggedObject::getTagNo));
+            ASN1EncodableVector teeEnforced = new ASN1EncodableVector();
+            for (DERTaggedObject t : teeList) teeEnforced.add(t);
+
             ASN1EncodableVector softwareEnforced = new ASN1EncodableVector();
-            try {
-                ASN1OctetString applicationId = createApplicationId(uid);
-                softwareEnforced.add(new DERTaggedObject(true, 709, applicationId));
-            } catch (Throwable e) {
-                 Log.w(TAG, "Failed to create application ID", e);
-            }
             softwareEnforced.add(new DERTaggedObject(true, 701, new ASN1Integer(System.currentTimeMillis())));
+            if (params.attestationChallenge != null) {
+                try {
+                    ASN1OctetString applicationId = createApplicationId(uid);
+                    softwareEnforced.add(new DERTaggedObject(true, 709, applicationId));
+                } catch (Throwable e) {
+                    Log.w(TAG, "Failed to create application ID", e);
+                }
+            }
 
             ASN1Encodable[] keyDescriptionElements = new ASN1Encodable[] {
                 new ASN1Integer(AttestationUtils.getAttestVersion()),

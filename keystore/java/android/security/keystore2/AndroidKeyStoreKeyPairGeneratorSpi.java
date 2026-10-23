@@ -858,6 +858,38 @@ public abstract class AndroidKeyStoreKeyPairGeneratorSpi extends KeyPairGenerato
                     for (int d : mKeymasterDigests) params.digest.add(d);
                 }
 
+                if (mKeymasterAlgorithm == KeymasterDefs.KM_ALGORITHM_EC) {
+                    try {
+                        params.ecCurve = keySizeAndNameToEcCurve(mKeySizeBits, mEcCurveName);
+                    } catch (InvalidAlgorithmParameterException e) {
+                        throw new ProviderException("Unsupported EC curve", e);
+                    }
+                }
+                if (mKeymasterEncryptionPaddings != null) {
+                    for (int p : mKeymasterEncryptionPaddings) params.padding.add(p);
+                }
+                if (mKeymasterSignaturePaddings != null) {
+                    for (int p : mKeymasterSignaturePaddings) {
+                        if (!params.padding.contains(p)) params.padding.add(p);
+                    }
+                }
+                if (mKeymasterAlgorithm == KeymasterDefs.KM_ALGORITHM_RSA
+                        && mKeymasterEncryptionPaddings != null) {
+                    for (int padding : mKeymasterEncryptionPaddings) {
+                        if (padding == KeymasterDefs.KM_PAD_RSA_OAEP) {
+                            if (mKeymasterMgf1Digests != null && mKeymasterMgf1Digests.length > 0) {
+                                for (int d : mKeymasterMgf1Digests) {
+                                    params.mgfDigest.add(d);
+                                }
+                            } else {
+                                params.mgfDigest.add(
+                                        KeyProperties.Digest.toKeymaster(DEFAULT_MGF1_DIGEST));
+                            }
+                            break;
+                        }
+                    }
+                }
+
                 if (mSpec.isDevicePropertiesAttestationIncluded()) {
                     try {
                         final String brand = isPropertyEmptyOrUnknown(Build.BRAND_FOR_ATTESTATION)
