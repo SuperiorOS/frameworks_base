@@ -1,5 +1,6 @@
 package android.security.trickystore;
 
+import android.security.pif.PlayIntegritySpoofService;
 import android.util.Log;
 
 import com.android.internal.org.bouncycastle.asn1.ASN1Boolean;
@@ -35,6 +36,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
@@ -43,6 +45,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -81,15 +84,22 @@ public final class CertificateHacker {
             Extension extension = leafHolder.getExtension(CertificateGenerator.ATTESTATION_OID);
             ASN1Sequence sequence = ASN1Sequence.getInstance(extension.getExtnValue().getOctets());
             ASN1Encodable[] encodables = sequence.toArray();
-            ASN1Sequence teeEnforced = (ASN1Sequence) encodables[7];
+            int teeIndex = (encodables.length > 7 && isRootOfTrustPresent(encodables[6])) ? 6 : 7;
+            ASN1Sequence teeEnforced = (ASN1Sequence) encodables[teeIndex];
 
             ASN1EncodableVector vector = new ASN1EncodableVector();
             ASN1Encodable originalRootOfTrust = null;
 
             for (ASN1Encodable element : teeEnforced) {
                 ASN1TaggedObject taggedObject = (ASN1TaggedObject) element;
-                if (taggedObject.getTagNo() == 704) {
+                int tagNo = taggedObject.getTagNo();
+                if (tagNo == 704) {
                     originalRootOfTrust = taggedObject.getBaseObject().toASN1Primitive();
+                } else if (tagNo == 705 || tagNo == 706 || tagNo == 718 || tagNo == 719) {
+                    continue;
+                } else if (spoofedIdBytes(tagNo) != null) {
+                    vector.add(new DERTaggedObject(
+                            true, tagNo, new DEROctetString(spoofedIdBytes(tagNo))));
                 } else {
                     vector.add(taggedObject);
                 }
@@ -119,12 +129,13 @@ public final class CertificateHacker {
 
             ContentSigner signer = createBCSigner(leaf.getSigAlgName(), keybox.keyPair.getPrivate());
 
-            Extension hackedExtension = hackAttestExtension(originalRootOfTrust, vector, encodables);
-            builder.addExtension(hackedExtension);
+            Extension hackedExtension = hackAttestExtension(originalRootOfTrust, vector, encodables, teeIndex);
 
             for (Object oid : leafHolder.getExtensions().getExtensionOIDs()) {
                 String oidString = oid.toString();
-                if (!oidString.equals(CertificateGenerator.ATTESTATION_OID.getId())) {
+                if (oidString.equals(CertificateGenerator.ATTESTATION_OID.getId())) {
+                    builder.addExtension(hackedExtension);
+                } else {
                     builder.addExtension(leafHolder.getExtension(
                         new ASN1ObjectIdentifier(oidString)));
                 }
@@ -251,15 +262,43 @@ public final class CertificateHacker {
         }
     }
 
+    private static boolean isRootOfTrustPresent(ASN1Encodable list) {
+        if (!(list instanceof ASN1Sequence)) return false;
+        ASN1Sequence seq = (ASN1Sequence) list;
+        for (int i = 0; i < seq.size(); i++) {
+            ASN1Encodable item = seq.getObjectAt(i);
+            if (item instanceof ASN1TaggedObject && ((ASN1TaggedObject) item).getTagNo() == 704) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static byte[] spoofedIdBytes(int tagNo) {
+        PlayIntegritySpoofService pif = PlayIntegritySpoofService.getInstance();
+        if (!pif.isConfigLoaded()) return null;
+        Map<String, String> fields = pif.getBuildFields();
+        String val = null;
+        switch (tagNo) {
+            case 710: val = fields.get("BRAND"); break;
+            case 711: val = fields.get("DEVICE"); break;
+            case 712: val = fields.get("PRODUCT"); break;
+            case 716: val = fields.get("MANUFACTURER"); break;
+            case 717: val = fields.get("MODEL"); break;
+        }
+        return (val != null && !val.isEmpty()) ? val.getBytes(StandardCharsets.UTF_8) : null;
+    }
+
     private static Extension hackAttestExtension(
             ASN1Encodable originalRootOfTrust,
             ASN1EncodableVector vector,
-            ASN1Encodable[] originalEncodables) throws Exception {
+            ASN1Encodable[] originalEncodables,
+            int teeIndex) throws Exception {
 
         byte[] bootKey = AttestationUtils.getBootKey();
-        byte[] bootHash = AttestationUtils.getBootHash();
+        byte[] bootHash = null;
 
-        if (bootHash == null && originalRootOfTrust instanceof ASN1Sequence) {
+        if (originalRootOfTrust instanceof ASN1Sequence) {
             try {
                 ASN1Sequence rot = (ASN1Sequence) originalRootOfTrust;
                 ASN1Encodable hashElement = rot.getObjectAt(3);
@@ -283,18 +322,25 @@ public final class CertificateHacker {
         };
         DERSequence hackedRootOfTrust = new DERSequence(rootOfTrustElements);
 
-        vector.add(new DERTaggedObject(true, 718, 
-            new ASN1Integer(AttestationUtils.getVendorPatchLevel(true))));
-        vector.add(new DERTaggedObject(true, 719, 
-            new ASN1Integer(AttestationUtils.getBootPatchLevel(true))));
-        vector.add(new DERTaggedObject(true, 706, 
-            new ASN1Integer(AttestationUtils.getPatchLevel(false))));
-        vector.add(new DERTaggedObject(true, 705, 
+        List<ASN1TaggedObject> rebuilt = new ArrayList<>();
+        for (int i = 0; i < vector.size(); i++) {
+            rebuilt.add((ASN1TaggedObject) vector.get(i));
+        }
+        rebuilt.add(new DERTaggedObject(704, hackedRootOfTrust));
+        rebuilt.add(new DERTaggedObject(true, 705,
             new ASN1Integer(AttestationUtils.getOsVersion())));
-        vector.add(new DERTaggedObject(704, hackedRootOfTrust));
+        rebuilt.add(new DERTaggedObject(true, 706,
+            new ASN1Integer(AttestationUtils.getPatchLevel(false))));
+        rebuilt.add(new DERTaggedObject(true, 718,
+            new ASN1Integer(AttestationUtils.getVendorPatchLevel(true))));
+        rebuilt.add(new DERTaggedObject(true, 719,
+            new ASN1Integer(AttestationUtils.getBootPatchLevel(true))));
+        rebuilt.sort(Comparator.comparingInt(ASN1TaggedObject::getTagNo));
 
-        DERSequence hackedEnforced = new DERSequence(vector);
-        originalEncodables[7] = hackedEnforced;
+        ASN1EncodableVector rebuiltVector = new ASN1EncodableVector();
+        for (ASN1TaggedObject t : rebuilt) rebuiltVector.add(t);
+
+        originalEncodables[teeIndex] = new DERSequence(rebuiltVector);
         DERSequence hackedSequence = new DERSequence(originalEncodables);
         DEROctetString hackedOctets = new DEROctetString(hackedSequence);
 
